@@ -6,6 +6,7 @@ import time
 
 from instruments.keithley.k2xxx import *
 from instruments.amrel.pla import *
+from instruments.amrel.sps import *
 
 ## TODO: Reduce code duplication.
 def cc_discharge(keithley1, keithley2, amrelpla, setcurrent, voltage_lower_limit,
@@ -38,7 +39,7 @@ def cc_charge(keithley1, keithley2, amrelsps, setcurrent, voltage_upper_limit,
 
     if voltage < voltage_upper_limit:
         start_time = time.time()
-        amrelsps_constant_current(amrelsps, setcurrent, 1)
+        amrelsps_constant_current(amrelsps, setcurrent, 1, 5)
         while voltage < voltage_upper_limit:
             voltage = keithley2xxx_measure_voltage(keithley1)
             # Current is calculated by measuring the voltage drop over a 5e-4 Ohm shunt.
@@ -60,8 +61,8 @@ rm = visa.ResourceManager()
 voltage_lower_limit = 2.5
 voltage_upper_limit = 4.1
 setcurrent = 8.5
-output_file_charge = '~/Documents/Alexander/data/CCC_0.5C.csv'
-output_file_discharge = '~/Documents/Alexander/data/CCD_0.5C.csv'
+output_file_charge = '/home/TEK/Documents/Alexander/data/CCC_0.5C.csv'
+output_file_discharge = '/home/TEK/Documents/Alexander/data/CCD_0.5C.csv'
 measurement_interval = 1
 
 amrelsps = rm.get_instrument('GPIB0::4::INSTR')
@@ -75,10 +76,9 @@ for i in instruments:
     i.write('*rst; status:preset; *cls')
 
 for i in range(10):
-    cc_discharge(keithley2000, keithley2700, amrelpla, setcurrent, voltage_lower_limit,
-                 output_file_discharge, measurement_interval)
     cc_charge(keithley2000, keithley2700, amrelsps, setcurrent, voltage_upper_limit,
               output_file_charge, measurement_interval)
-
+    cc_discharge(keithley2000, keithley2700, amrelpla, setcurrent, voltage_lower_limit,
+                 output_file_discharge, measurement_interval)
 for i in instruments:
     i.write('trace:clear; feed:control next')
