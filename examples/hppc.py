@@ -3,6 +3,7 @@
 import visa
 import time
 import csv
+import os
 
 
 def hppc():
@@ -15,7 +16,7 @@ def hppc():
             psupply.write('curr %f; output 1' % pulse_current)
             while True:
                 measure_and_write_data(time_start)
-                pulse_time = time.time() - time_start
+                pulse_time = time.time() - pulse_start
                 if pulse_time > pulse_period:
                     break
             psupply.write('curr 0; output 0')
@@ -29,7 +30,7 @@ def hppc():
             psink.write('curr %f; input 1' % pulse_current)
             while True:
                 measure_and_write_data(time_start)
-                pulse_time = time.time()
+                pulse_time = time.time() - pulse_start
                 if pulse_time > pulse_period:
                     break
             psink.write('curr 0; input 0')
@@ -129,9 +130,12 @@ data_file = '/home/TEK/Documents/Alexander/data/hppc.csv'
 pulse_current = 10.0
 pulse_period = 10
 rest_period = 40
-soc_list = [0.20, 0.40, 0.60, 0.80]
+soc_list = [0.80, 0.60, 0.40, 0.20]
 voltage_lower_limit = 2.5
 voltage_upper_limit = 4.1
+
+if os.path.isfile(data_file):
+    os.remove(data_file)
 
 reset_instruments()
 psupply.write('volt 5') # Default is 2 Volts, which is too low.
