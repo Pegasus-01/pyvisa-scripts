@@ -17,6 +17,7 @@ def gitt(mode):
         time_start = time.time()
         period_start = time.time()
         psink.write('curr %f; input 1' % setcurrent)
+        voltage = dmm1.ask_for_values('meas:volt?')[0]
         while voltage > voltage_lower_limit:
             measure_and_write_data(time_start)
             elapsed = time.time() - period_start
@@ -29,12 +30,15 @@ def gitt(mode):
                     psink.write('input 0')
                 period_start = time.time()
             time.sleep(1)
+            if voltage < voltage_lower_failsafe:
+                raise Exception('Cell voltage too low!')
         psink.write('curr 0; input 0')
         return voltage
     elif mode == 'charge':
         time_start = time.time()
         period_start = time.time()
         psupply.write('curr %f; output 1' % setcurrent)
+        voltage = dmm1.ask_for_values('meas:volt?')[0]
         while voltage < voltage_upper_limit:
             measure_and_write_data(time_start)
             voltage = dmm1.ask_for_values('meas:volt?')[0]
@@ -47,10 +51,12 @@ def gitt(mode):
                     psupply.write('output 0')
                 period_start = time.time()
             time.sleep(1)
+            if voltage > voltage_upper_failsafe:
+                raise Exception('Cell voltage too high!')
         psupply.write('curr 0; output 0')
         return voltage
     else:
-        raise Error('Unknown mode of operation: %s' % mode)
+        raise Exception('Unknown mode of operation: %s' % mode)
 
 
 def measure_and_write_data(time_start):
@@ -97,7 +103,9 @@ data_file = '/home/TEK/Documents/Alexander/data/gitt.csv'
 period = 600
 setcurrent = 8.5
 voltage_lower_limit = 2.5
+voltage_lower_failsafe = voltage_lower_limit - 0.1
 voltage_upper_limit = 4.1
+voltage_upper_failsafe = voltage_upper_limit + 0.1
 voltage_nominal = (voltage_lower_limit + voltage_upper_limit) / 2
 
 if os.path.isfile(data_file):
@@ -109,18 +117,20 @@ psupply.write('volt 5') # Default is 2 Volts, which is too low.
     
 voltage = dmm1.ask_for_values('meas:volt?')[0]
 for i in range(cycles):
-    if voltage <= voltage_nominal and voltage > voltage_lower_limit:
+    if voltage <= voltage_nominal and voltage > voltage_lower_failsafe:
         try:
             voltage = gitt('charge')
-        except:
+        except Exception as e:
+            print(e)
             reset_instruments()
-    elif voltage > voltage_nominal and voltage < voltage_upper_limit:
+    elif voltage > voltage_nominal and voltage < voltage_upper_failsafe:
         try:
             voltage = gitt('discharge')
-        except:
+        except Exception as e:
+            print(e)
             reset_instruments()
     else:
         reset_instruments()
-        raise Error('Cell voltage outside acceptable limits!')
+        raise Exception('Cell voltage outside acceptable limits!')
     
 reset_instruments()

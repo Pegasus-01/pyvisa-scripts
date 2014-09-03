@@ -49,7 +49,7 @@ def set_soc(target_soc):
     state_of_charge = get_soc()
     if state_of_charge < 0 or state_of_charge > 1:
         reset_instruments()
-        raise Error('Cell voltage outside acceptable limits!')
+        raise Exception('Cell voltage outside acceptable limits!')
     if state_of_charge < target_soc:
         # The first loop through this for statement is a regular constant
         # current charge. Subsequent loops are meant to emulate a constant
