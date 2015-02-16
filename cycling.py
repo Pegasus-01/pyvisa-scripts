@@ -25,7 +25,6 @@
 import time
 import csv
 import visa
-import datetime
 
 def cc(target_voltage, set_current):
     if set_current >= 0:
@@ -39,10 +38,7 @@ def cc(target_voltage, set_current):
         voltage = vmult.query_ascii_values('MEASure:VOLTage?')[0]
         current = cmult.query_ascii_values('MEASure:VOLTage?')[0] / 0.0005
         elapsed = time.time() - start_time
-        with open(output_file, 'a') as csvfile:
-            datawriter = csv.writer(csvfile, delimiter=' ', quotechar='|',
-                                    quoting=csv.QUOTE_MINIMAL)
-            datawriter.writerow([voltage] + [current] + [elapsed])
+        write_to_disc([voltage] + [current] + [elapsed])
         print('Voltage: %f V, Current: %f A' % (voltage, current))
         if (set_current > 0 and voltage >= target_voltage or
                 set_current <= 0 and voltage <= target_voltage):
@@ -56,23 +52,35 @@ def cv(set_voltage, target_current):
         # Not fully implemented yet, do not use!
         #instr = pla
         raise ValueError('{target_current} must be positive.')
+    instr.write('VOLTage %f; OUTPut 1' % (set_voltage))
     while True:
-        instr.write('VOLTage %f; OUTPut 1' % (set_voltage))
         time.sleep(1)
         voltage = vmult.query_ascii_values('MEASure:VOLTage?')[0]
         current = cmult.query_ascii_values('MEASure:VOLTage?')[0] / 0.0005
         elapsed = time.time() - start_time
-        with open(output_file, 'a') as csvfile:
-            datawriter = csv.writer(csvfile, delimiter=' ', quotechar='|',
-                                    quoting=csv.QUOTE_MINIMAL)
-            datawriter.writerow([voltage] + [current] + [elapsed])
+        write_to_disc([voltage] + [current] + [elapsed])
         print('Measured: %f V, Config: %f V, Current: %f A' %
               (voltage, current))
         if current < target_current:
             instr.write('OUTPut 0')
             return
 
+def write_to_disc(data):
+    with open(output_file, 'a') as csvfile:
+    datawriter = csv.writer(csvfile, delimiter=' ', quotechar='|',
+                            quoting=csv.QUOTE_MINIMAL)
+    datawriter.writerow(data)
 
+
+# Assign names to instruments.
+# After creating a visa.ResourceManager() object, use rm.list_resources() to get
+# a list of all connected resources. If you are uncertain of which resource
+# corresponds to which instrument, assign a temporary name to a resource with
+# temp_resource = rm.open_resource(<resource>) and issue
+# temp_resource.query('*IDN?') to get some useful information about it.
+#
+# DO NOT USE THE FOLLOWING CODE AS IS! You must find the correct GPIB addresses
+# for *your* system, even if you are using the same instruments.
 rm = visa.ResourceManager()
 sps = rm.open_resource('GPIB0::4::INSTR')
 pla = rm.open_resource('GPIB0::5::INSTR')
@@ -82,7 +90,7 @@ cmult =  rm.open_resource('GPIB0::21::INSTR')
 # -------------------------------
 # USER EDITABLE VALUES BEGIN HERE
 # -------------------------------
-output_file = '/home/abessman/data/scania_cell521_cycle_' + str(datetime.date.today()) + '.csv'
+output_file = '/home/abessman/data/scania_cell521_cycle_2015-02-16.csv'
 lowv, highv = 3.0, 4.1
 current = 25.0
 cycles = 50
